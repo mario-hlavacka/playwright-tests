@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mysecretpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  run-migrations-seed:
+    image: ynnerjoyn/nestjs-rest-api:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:mysecretpassword@db:5432/postgres?schema=public
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed"
+  backend-app:
+    image: ynnerjoyn/nestjs-rest-api:latest
+    ports:
+      - "3000:3000"
+    depends_on:      
+      run-migrations-seed:        
+        condition: service_completed_successfully
+    environment:
+      - DATABASE_URL=postgresql://postgres:mysecretpassword@db:5432/postgres?schema=public
+      - FRONTEND_URL=http://localhost:4200
+  frontend-app:
+    image: ynnerjoyn/simple-angular-app:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - backend-app
+    environment:
+      - BACKEND_URL=http://backend-app:3000/
+  tests:
+    build: .
+    depends_on:
+    - frontend-app
+    environment:
+    - TARGET_URL=http://frontend-app/
+
+volumes:
+  postgres_data:

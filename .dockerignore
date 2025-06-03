@@ -1,0 +1,19 @@
+# Playwright
+node_modules
+test-results
+playwright-report
+blob-report
+playwright/.cache
+
+# git
+.github
+*.md
+.git
+.gitignore
+
+# Docker
+Dockerfile
+compose.yaml
+
+# Env
+.env
